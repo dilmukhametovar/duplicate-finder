@@ -127,11 +127,12 @@ void DuplicateScanner::onHashed(FileEntry entry, bool fullHash) {
             if (!entry.fullHash.isEmpty())
                 byFullHash_[entry.fullHash].append(entry);
         } else {
+            ++scannedFiles_;
+
             if (!entry.miniHash.isEmpty())
                 byMiniHash_[entry.miniHash].append(entry);
         }
 
-        ++scannedFiles_;
         scanned = scannedFiles_;
         total   = totalFiles_;
 
@@ -162,6 +163,7 @@ void DuplicateScanner::onHashed(FileEntry entry, bool fullHash) {
                                        * (it.value().size() - 1);
                     }
                 }
+
                 byFullHash_.clear();
                 stage_ = IDLE;
                 action = Finish;

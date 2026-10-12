@@ -102,7 +102,7 @@ void MainWindow::startScan() {
 void MainWindow::onProgress(int scanned, int total, qint64 /*bytes*/) {
     if (total > 0)
         progressBar_->setValue(int(100.0 * scanned / total));
-    statusLabel_->setText(QString("Processed %1 из %2").arg(scanned).arg(total));
+    statusLabel_->setText(QString("Processed %1 of %2").arg(scanned).arg(total));
 }
 
 void MainWindow::onGroupFound(const QVector<FileEntry>& group) {
