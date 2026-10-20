@@ -8,6 +8,7 @@
 #include <QPushButton>
 #include <QProgressBar>
 #include <QLabel>
+#include <QTimer>
 #include <QTreeView>
 #include <QFileDialog>
 #include <QMessageBox>
@@ -58,6 +59,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     scanner_ = new DuplicateScanner(this);
 
+    uiTick_ = new QTimer(this);
+    uiTick_->setInterval(100); // ms
+
     connect(browseBtn_, &QPushButton::clicked,
             this,       &MainWindow::chooseFolder);
     connect(scanBtn_,   &QPushButton::clicked,
@@ -72,6 +76,8 @@ MainWindow::MainWindow(QWidget *parent)
             this,     &MainWindow::onGroupFound);
     connect(scanner_, &DuplicateScanner::finished,
             this,     &MainWindow::onFinished);
+    connect(uiTick_,  &QTimer::timeout,
+            this,     &MainWindow::refreshStatusLabel);
 }
 
 MainWindow::~MainWindow()
@@ -92,17 +98,25 @@ void MainWindow::startScan() {
 
     model_->clear();
     progressBar_->setValue(0);
+    lastScanned_ = 0;
+    lastTotal_   = 0;
+    scanning_    = true;
+
     statusLabel_->setText("Scanning");
+
     scanBtn_->setEnabled(false);
     cancelBtn_->setEnabled(true);
 
+    scanTimer_.start();
+    uiTick_->start();
     scanner_->start(dir);
 }
 
 void MainWindow::onProgress(int scanned, int total, qint64 /*bytes*/) {
+    lastScanned_ = scanned;
+    lastTotal_   = total;
     if (total > 0)
         progressBar_->setValue(int(100.0 * scanned / total));
-    statusLabel_->setText(QString("Processed %1 of %2").arg(scanned).arg(total));
 }
 
 void MainWindow::onGroupFound(const QVector<FileEntry>& group) {
@@ -110,11 +124,40 @@ void MainWindow::onGroupFound(const QVector<FileEntry>& group) {
 }
 
 void MainWindow::onFinished(int groups, qint64 wasted) {
+    scanning_ = false;
+
+    uiTick_->stop();
+    const qint64 elapsed = scanTimer_.elapsed();
+
     scanBtn_->setEnabled(true);
     cancelBtn_->setEnabled(false);
     progressBar_->setValue(100);
     statusLabel_->setText(
-        QString("Done: groups — %1, can be cleaned %2")
+        QString("Done in %1 s: groups — %2, can be cleaned %3")
+            .arg(elapsed / 1000.0)
             .arg(groups)
             .arg(FileUtils::humanReadableSize(wasted)));
+}
+
+void MainWindow::refreshStatusLabel() {
+    if (!scanTimer_.isValid() || !scanning_)
+        return;
+
+    const double seconds = scanTimer_.elapsed() / 1000.0;
+
+    QString progressPart;
+    if (lastTotal_ > 0) {
+        const int percent = int(100.0 * lastScanned_ / lastTotal_);
+        progressPart = QString("%1 / %2 files (%3%)")
+                           .arg(lastScanned_)
+                           .arg(lastTotal_)
+                           .arg(percent);
+    } else {
+        progressPart = "...";
+    }
+
+    statusLabel_->setText(QString("Scanning: %1 - %2 s")
+                              .arg(progressPart)
+                              .arg(seconds, 0, 'f', 1));
+
 }

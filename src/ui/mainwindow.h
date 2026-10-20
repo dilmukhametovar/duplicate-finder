@@ -1,4 +1,5 @@
 #pragma once
+#include <QElapsedTimer>
 #include <QMainWindow>
 #include "core/FileEntry.h"
 
@@ -29,6 +30,7 @@ private slots:
     void onProgress(int scanned, int total, qint64 bytes);
     void onGroupFound(const QVector<FileEntry>& group);
     void onFinished(int groups, qint64 wasted);
+    void refreshStatusLabel();
 
 private:
     QLineEdit*   pathEdit_   = nullptr;
@@ -41,4 +43,11 @@ private:
 
     DuplicateScanner*     scanner_ = nullptr;
     DuplicateGroupsModel* model_   = nullptr;
+
+    QElapsedTimer scanTimer_;
+    QTimer*       uiTick_ = nullptr;
+
+    int  lastScanned_ = 0;
+    int  lastTotal_   = 0;
+    bool scanning_ = false;
 };

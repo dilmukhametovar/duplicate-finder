@@ -1,6 +1,7 @@
 #pragma once
 #include "FileEntry.h"
 #include "CancellationToken.h"
+#include <QElapsedTimer>
 #include <QHash>
 #include <QMutex>
 #include <QObject>
