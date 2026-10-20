@@ -23,8 +23,8 @@ void DuplicateScanner::start(const QString& rootDir, int threadCount) {
     {
         QMutexLocker l(&mutex_);
 
-        //byMiniHash_.clear();
-        //byFullHash_.clear();
+        byMiniHash_.clear();
+        byFullHash_.clear();
 
         pending_ = 0;
         scannedFiles_ = 0;
@@ -119,25 +119,33 @@ void DuplicateScanner::onHashed(FileEntry entry, bool fullHash) {
     qint64  wastedBytes = 0;
     int     scanned     = 0;
     int     total       = 0;
+    bool   wasCancelled = false;
 
     {
         QMutexLocker l(&mutex_);
 
-        if (fullHash) {
-            if (!entry.fullHash.isEmpty())
-                byFullHash_[entry.fullHash].append(entry);
-        } else {
-            ++scannedFiles_;
+        wasCancelled = token_.isCancelled();
 
-            if (!entry.miniHash.isEmpty())
-                byMiniHash_[entry.miniHash].append(entry);
+        if (!wasCancelled) {
+            if (fullHash) {
+                if (!entry.fullHash.isEmpty())
+                    byFullHash_[entry.fullHash].append(entry);
+            } else {
+                ++scannedFiles_;
+
+                if (!entry.miniHash.isEmpty())
+                    byMiniHash_[entry.miniHash].append(entry);
+            }
         }
 
         scanned = scannedFiles_;
         total   = totalFiles_;
 
         if (--pending_ == 0) {
-            if (stage_ == MINI) {
+            if (wasCancelled) {
+                stage_ = IDLE;
+                action = Finish;
+            } else if (stage_ == MINI) {
                 // Select groups where mini hash is equal
                 for (auto it = byMiniHash_.cbegin(); it != byMiniHash_.cend(); ++it) {
                     if (it.value().size() >= 2)
@@ -171,7 +179,8 @@ void DuplicateScanner::onHashed(FileEntry entry, bool fullHash) {
         }
     }
 
-    emit progress(scanned, total, 0);
+    if (!wasCancelled)
+        emit progress(scanned, total, 0);
 
     if (action == StartStage3) {
         for (const auto& f : nextStage) {

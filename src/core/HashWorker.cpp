@@ -37,8 +37,10 @@ void HashWorker::run() {
 
     qint64 read = 0;
     while (read < toRead) {
-        if (token_ && token_->isCancelled())
+        if (token_ && token_->isCancelled()) {
+            if (onDone_) onDone_(std::move(entry_), fullHash_);
             return;
+        }
 
         const qint64 want = std::min(buffer.size(), toRead - read);
         const qint64 got = f.read(buffer.data(), want);
