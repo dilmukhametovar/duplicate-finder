@@ -30,7 +30,7 @@ A Qt6/C++17 desktop utility that scans a directory tree and finds files with ide
 ---
 ## TODO
 
-- Show time elapsed.
 - Add a sorting files by size, name.
 - Add a "Delete selected duplicates" action with confirmation.
 - Verify the Windows build.
+- Add drag & drop
